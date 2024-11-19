@@ -1,0 +1,59 @@
+# prompt: stock market prediction using machine learning to web app
+
+!pip install yfinance streamlit scikit-learn
+
+import yfinance as yf
+import streamlit as st
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+# Title of the app
+st.title("Stock Market Prediction")
+
+# Get user input for stock ticker
+ticker = st.text_input("Enter stock ticker (e.g., AAPL):")
+
+# Get historical data if ticker is entered
+if ticker:
+    try:
+        stock_data = yf.download(ticker, start="2020-01-01", end="2023-01-01")
+
+        # Display the stock data
+        st.subheader("Stock Data")
+        st.write(stock_data)
+
+        # Prepare data for prediction
+        df = stock_data[["Close"]]
+        df["Prediction"] = df["Close"].shift(-1)  # Predict next day's closing price
+        df.dropna(inplace=True)
+
+        X = df[["Close"]]
+        y = df["Prediction"]
+
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Train the linear regression model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+
+        # Make predictions
+        y_pred = model.predict(X_test)
+
+        # Evaluate the model
+        mse = mean_squared_error(y_test, y_pred)
+        st.subheader("Model Evaluation")
+        st.write(f"Mean Squared Error: {mse}")
+
+        # Predict future price (next day)
+        last_close_price = df["Close"].iloc[-1]
+        future_price_prediction = model.predict([[last_close_price]])[0]
+        st.subheader("Predicted Future Price")
+        st.write(f"The predicted closing price for tomorrow is: {future_price_prediction}")
+
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+else:
+    st.write("Please enter a stock ticker.")
